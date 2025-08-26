@@ -340,3 +340,94 @@ it('notificationTime을 10으로 하면 지정 시간 10분 전 알람 텍스트
 
   expect(screen.getByText('10분 후 기존 회의 일정이 시작됩니다.')).toBeInTheDocument();
 });
+
+describe('반복 일정 표시', () => {
+  it('캘린더 뷰에서 반복 일정을 시각적으로 구분하여 표시해야 한다', async () => {
+    setupMockHandlerCreation();
+
+    const { user } = setup(<App />);
+
+    // 반복 일정 생성
+    await user.click(screen.getAllByText('일정 추가')[0]);
+    await user.type(screen.getByLabelText('제목'), '반복 회의');
+    await user.type(screen.getByLabelText('날짜'), '2025-10-15');
+    await user.type(screen.getByLabelText('시작 시간'), '09:00');
+    await user.type(screen.getByLabelText('종료 시간'), '10:00');
+    await user.type(screen.getByLabelText('설명'), '매주 반복 회의');
+    await user.type(screen.getByLabelText('위치'), '회의실 A');
+    await user.click(screen.getByLabelText('카테고리'));
+    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '업무-option' }));
+
+    // 반복 설정 - weekly로 설정
+    await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: 'weekly-option' }));
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 캘린더 뷰에서 반복 일정 시각적 구분 확인
+    const monthView = within(screen.getByTestId('month-view'));
+
+    // 반복 일정임을 나타내는 시각적 요소가 있어야 함 (아이콘 또는 태그)
+    const repeatIcon = monthView.getByTestId('RepeatIcon');
+    expect(repeatIcon).toBeInTheDocument();
+    expect(repeatIcon).toBeVisible();
+  });
+
+  it('반복하지 않는 일정은 시각적 구분 표시가 없어야 한다', async () => {
+    // 빈 이벤트 목록으로 시작
+    server.use(
+      http.get('/api/events', () => {
+        return HttpResponse.json({ events: [] });
+      })
+    );
+
+    const { user } = setup(<App />);
+
+    // 단일 일정 생성 (반복 없음)
+    await user.click(screen.getAllByText('일정 추가')[0]);
+    await user.type(screen.getByLabelText('제목'), '단일 회의');
+    await user.type(screen.getByLabelText('날짜'), '2025-10-15');
+    await user.type(screen.getByLabelText('시작 시간'), '09:00');
+    await user.type(screen.getByLabelText('종료 시간'), '10:00');
+    await user.type(screen.getByLabelText('설명'), '단발성 회의');
+    await user.type(screen.getByLabelText('위치'), '회의실 A');
+    await user.click(screen.getByLabelText('카테고리'));
+    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '업무-option' }));
+
+    server.use(
+      http.post('/api/events', async ({ request }) => {
+        const requestBody = await request.json();
+        return HttpResponse.json({
+          ...(requestBody as Record<string, string | number | object>),
+          id: Date.now().toString(),
+        });
+      }),
+      http.get('/api/events', () => {
+        return HttpResponse.json({
+          events: [
+            {
+              id: '1',
+              title: '단일 회의',
+              date: '2025-10-15',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '단발성 회의',
+              location: '회의실 A',
+              category: '업무',
+              repeat: { type: 'none', interval: 1 },
+              notificationTime: 10,
+            },
+          ],
+        });
+      })
+    );
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 캘린더 뷰에서 반복 아이콘이 없어야 함
+    const monthView = within(screen.getByTestId('month-view'));
+    expect(monthView.queryByTestId('RepeatIcon')).toBeInTheDocument();
+  });
+});
