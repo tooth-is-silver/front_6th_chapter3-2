@@ -428,6 +428,6 @@ describe('반복 일정 표시', () => {
 
     // 캘린더 뷰에서 반복 아이콘이 없어야 함
     const monthView = within(screen.getByTestId('month-view'));
-    expect(monthView.queryByTestId('RepeatIcon')).toBeInTheDocument();
+    expect(monthView.queryByTestId('RepeatIcon')).not.toBeInTheDocument();
   });
 });
