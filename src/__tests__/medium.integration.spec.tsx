@@ -641,3 +641,103 @@ describe('반복 일정 단일 수정', () => {
     expect(eventList.getByText('수정된 단일 회의')).toBeInTheDocument();
   });
 });
+
+describe('반복 일정 단일 삭제', () => {
+  it('반복 일정을 삭제하면 해당 일정만 삭제되고 다른 반복 일정은 남아있다', async () => {
+    // 반복 일정이 여러 개 있는 상태로 시작
+    server.use(
+      http.get('/api/events', () => {
+        return HttpResponse.json({
+          events: [
+            {
+              id: '1',
+              title: '매주 회의',
+              date: '2025-10-15',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '매주 반복 회의',
+              location: '회의실 A',
+              category: '업무',
+              repeat: {
+                type: 'weekly',
+                interval: 1,
+                endDate: '2025-12-31',
+                endCondition: 'endDate',
+              },
+              notificationTime: 10,
+            },
+            {
+              id: '2',
+              title: '매주 회의',
+              date: '2025-10-22',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '매주 반복 회의',
+              location: '회의실 A',
+              category: '업무',
+              repeat: {
+                type: 'weekly',
+                interval: 1,
+                endDate: '2025-12-31',
+                endCondition: 'endDate',
+              },
+              notificationTime: 10,
+            },
+          ],
+        });
+      })
+    );
+
+    const { user } = setup(<App />);
+    await screen.findByText('일정 로딩 완료!');
+
+    // 초기 상태에서 두 개의 반복 일정이 있는지 확인
+    const eventList = within(screen.getByTestId('event-list'));
+    const meetingEvents = eventList.getAllByText('매주 회의');
+    expect(meetingEvents).toHaveLength(2);
+
+    // 첫 번째 반복 일정 삭제
+    const deleteButtons = screen.getAllByLabelText('Delete event');
+
+    // 삭제 후 해당 일정만 삭제되고 다른 반복 일정은 남아있어야 함
+    server.use(
+      http.delete('/api/events/1', () => {
+        return HttpResponse.json({ success: true });
+      }),
+      http.get('/api/events', () => {
+        return HttpResponse.json({
+          events: [
+            {
+              id: '2',
+              title: '매주 회의',
+              date: '2025-10-22',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '매주 반복 회의',
+              location: '회의실 A',
+              category: '업무',
+              repeat: {
+                type: 'weekly',
+                interval: 1,
+                endDate: '2025-12-31',
+                endCondition: 'endDate',
+              },
+              notificationTime: 10,
+            },
+          ],
+        });
+      })
+    );
+
+    await user.click(deleteButtons[0]);
+
+    // 성공 메시지 확인
+    expect(screen.getByText('일정이 삭제되었습니다.')).toBeInTheDocument();
+
+    // 하나의 반복 일정만 남아있는지 확인
+    await screen.findByText('일정 로딩 완료!');
+    const updatedEventList = within(screen.getByTestId('event-list'));
+    const remainingMeetingEvents = updatedEventList.getAllByText('매주 회의');
+    expect(remainingMeetingEvents).toHaveLength(1);
+  });
+});
