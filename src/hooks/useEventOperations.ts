@@ -2,6 +2,7 @@ import { useSnackbar } from 'notistack';
 import { useEffect, useState } from 'react';
 
 import { Event, EventForm } from '../types';
+import { convertRecurringToSingle } from '../utils/recurringEventEdit';
 import { generateRecurringEvents } from '../utils/recurringEvents';
 
 export const useEventOperations = (editing: boolean, onSave?: () => void) => {
@@ -25,11 +26,13 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
   const saveEvent = async (eventData: Event | EventForm) => {
     try {
       if (editing) {
-        // 수정 모드에서는 기존 로직 유지 (단일 이벤트만 수정)
+        // 수정 모드에서는 반복 일정을 단일 일정으로 변환
+        const convertedEventData = convertRecurringToSingle(eventData as Event);
+
         const response = await fetch(`/api/events/${(eventData as Event).id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventData),
+          body: JSON.stringify(convertedEventData),
         });
 
         if (!response.ok) {

@@ -6,6 +6,11 @@ import { Event } from '../types';
  * @returns 단일 일정으로 변환된 이벤트
  */
 export function convertRecurringToSingle(event: Event): Event {
-  // 아직 구현되지 않음 - RED 단계
-  return event;
+  return {
+    ...event,
+    repeat: {
+      type: 'none',
+      interval: 1,
+    },
+  };
 }

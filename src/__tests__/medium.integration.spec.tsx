@@ -576,8 +576,9 @@ describe('반복 일정 단일 수정', () => {
     const monthView = within(screen.getByTestId('month-view'));
     expect(monthView.getByTestId('RepeatIcon')).toBeInTheDocument();
 
-    // 반복 일정 수정하기
-    await user.click(screen.getByText('매주 회의'));
+    // 반복 일정 수정하기 - Edit 버튼 클릭
+    const editButtons = screen.getAllByLabelText('Edit event');
+    await user.click(editButtons[0]);
 
     // 제목 수정
     const titleInput = screen.getByLabelText('제목');
@@ -635,7 +636,8 @@ describe('반복 일정 단일 수정', () => {
     const updatedMonthView = within(screen.getByTestId('month-view'));
     expect(updatedMonthView.queryByTestId('RepeatIcon')).not.toBeInTheDocument();
 
-    // 제목이 변경되었는지 확인
-    expect(screen.getByText('수정된 단일 회의')).toBeInTheDocument();
+    // 제목이 변경되었는지 확인 - event-list 내에서 확인
+    const eventList = within(screen.getByTestId('event-list'));
+    expect(eventList.getByText('수정된 단일 회의')).toBeInTheDocument();
   });
 });

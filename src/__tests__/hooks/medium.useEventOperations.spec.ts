@@ -84,7 +84,7 @@ it("새로 정의된 'title', 'endTime' 기준으로 적절하게 일정이 업�
     description: '기존 팀 미팅',
     location: '회의실 B',
     category: '업무',
-    repeat: { type: 'none', interval: 0 },
+    repeat: { type: 'none', interval: 1 },
     notificationTime: 10,
     title: '수정된 회의',
     endTime: '11:00',
