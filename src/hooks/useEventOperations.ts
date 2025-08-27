@@ -26,10 +26,10 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
   const saveEvent = async (eventData: Event | EventForm) => {
     try {
       if (editing) {
-        // 수정 모드에서는 반복 일정을 단일 일정으로 변환
-        const convertedEventData = convertRecurringToSingle(eventData as Event);
+        const eventToUpdate = eventData as Event;
+        const convertedEventData = convertRecurringToSingle(eventToUpdate);
 
-        const response = await fetch(`/api/events/${(eventData as Event).id}`, {
+        const response = await fetch(`/api/events/${eventToUpdate.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(convertedEventData),
