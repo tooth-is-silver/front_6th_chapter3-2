@@ -43,7 +43,6 @@ import { useEventForm } from './hooks/useEventForm.ts';
 import { useEventOperations } from './hooks/useEventOperations.ts';
 import { useNotifications } from './hooks/useNotifications.ts';
 import { useSearch } from './hooks/useSearch.ts';
-// import { Event, EventForm, RepeatType } from './types';
 import { Event, EventForm, RepeatType, RepeatEndCondition } from './types';
 import {
   formatDate,
@@ -119,6 +118,15 @@ function App() {
 
   const { enqueueSnackbar } = useSnackbar();
 
+  // 반복 설정 객체 생성 헬퍼 함수
+  const createRepeatConfig = () => ({
+    type: isRepeating ? repeatType : 'none',
+    interval: repeatInterval,
+    endDate: repeatEndDate || undefined,
+    endCondition: isRepeating ? repeatEndCondition : undefined,
+    endCount: isRepeating && repeatEndCondition === 'endCount' ? repeatEndCount : undefined,
+  });
+
   const addOrUpdateEvent = async () => {
     if (!title || !date || !startTime || !endTime) {
       enqueueSnackbar('필수 정보를 모두 입력해주세요.', { variant: 'error' });
@@ -139,13 +147,7 @@ function App() {
       description,
       location,
       category,
-      repeat: {
-        type: isRepeating ? repeatType : 'none',
-        interval: repeatInterval,
-        endDate: repeatEndDate || undefined,
-        endCondition: isRepeating ? repeatEndCondition : undefined,
-        endCount: isRepeating && repeatEndCondition === 'endCount' ? repeatEndCount : undefined,
-      },
+      repeat: createRepeatConfig(),
       notificationTime,
     };
 
@@ -521,7 +523,7 @@ function App() {
                   </Select>
                 </FormControl>
               </Stack>
-              
+
               {/* 종료 조건별 추가 입력 필드 */}
               {repeatEndCondition === 'endDate' && (
                 <FormControl fullWidth>
@@ -535,7 +537,7 @@ function App() {
                   />
                 </FormControl>
               )}
-              
+
               {repeatEndCondition === 'endCount' && (
                 <FormControl fullWidth>
                   <FormLabel data-testId="repeat-end-count-label">반복 횟수</FormLabel>
@@ -549,7 +551,7 @@ function App() {
                   />
                 </FormControl>
               )}
-              
+
               {repeatEndCondition === 'none' && (
                 <Typography variant="body2" color="text.secondary" data-testId="repeat-none-info">
                   2025년 6월 30일까지 반복됩니다.
@@ -699,13 +701,7 @@ function App() {
                 description,
                 location,
                 category,
-                repeat: {
-                  type: isRepeating ? repeatType : 'none',
-                  interval: repeatInterval,
-                  endDate: repeatEndDate || undefined,
-                  endCondition: isRepeating ? repeatEndCondition : undefined,
-                  endCount: isRepeating && repeatEndCondition === 'endCount' ? repeatEndCount : undefined,
-                },
+                repeat: createRepeatConfig(),
                 notificationTime,
               });
             }}
