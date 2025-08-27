@@ -44,7 +44,7 @@ import { useEventOperations } from './hooks/useEventOperations.ts';
 import { useNotifications } from './hooks/useNotifications.ts';
 import { useSearch } from './hooks/useSearch.ts';
 // import { Event, EventForm, RepeatType } from './types';
-import { Event, EventForm, RepeatType } from './types';
+import { Event, EventForm, RepeatType, RepeatEndCondition } from './types';
 import {
   formatDate,
   formatMonth,
@@ -90,6 +90,10 @@ function App() {
     setRepeatInterval,
     repeatEndDate,
     setRepeatEndDate,
+    repeatEndCondition,
+    setRepeatEndCondition,
+    repeatEndCount,
+    setRepeatEndCount,
     notificationTime,
     setNotificationTime,
     startTimeError,
@@ -139,6 +143,8 @@ function App() {
         type: isRepeating ? repeatType : 'none',
         interval: repeatInterval,
         endDate: repeatEndDate || undefined,
+        endCondition: isRepeating ? repeatEndCondition : undefined,
+        endCount: isRepeating && repeatEndCondition === 'endCount' ? repeatEndCount : undefined,
       },
       notificationTime,
     };
@@ -496,16 +502,59 @@ function App() {
                   />
                 </FormControl>
                 <FormControl fullWidth>
-                  <FormLabel data-testId="repeat-end-date-label">반복 종료일</FormLabel>
+                  <FormLabel data-testId="repeat-end-condition-label">반복 종료 조건</FormLabel>
+                  <Select
+                    data-testId="repeat-end-condition-select"
+                    size="small"
+                    value={repeatEndCondition}
+                    onChange={(e) => setRepeatEndCondition(e.target.value as RepeatEndCondition)}
+                  >
+                    <MenuItem value="endDate" aria-label="endDate-option">
+                      특정 날짜까지
+                    </MenuItem>
+                    <MenuItem value="endCount" aria-label="endCount-option">
+                      특정 횟수만큼
+                    </MenuItem>
+                    <MenuItem value="none" aria-label="none-option">
+                      종료 없음
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              
+              {/* 종료 조건별 추가 입력 필드 */}
+              {repeatEndCondition === 'endDate' && (
+                <FormControl fullWidth>
+                  <FormLabel data-testId="repeat-end-date-label">종료 날짜</FormLabel>
                   <TextField
-                    data-testId="repeat-end-date-select"
+                    data-testId="repeat-end-date-input"
                     size="small"
                     type="date"
                     value={repeatEndDate}
                     onChange={(e) => setRepeatEndDate(e.target.value)}
                   />
                 </FormControl>
-              </Stack>
+              )}
+              
+              {repeatEndCondition === 'endCount' && (
+                <FormControl fullWidth>
+                  <FormLabel data-testId="repeat-end-count-label">반복 횟수</FormLabel>
+                  <TextField
+                    data-testId="repeat-end-count-input"
+                    size="small"
+                    type="number"
+                    value={repeatEndCount}
+                    onChange={(e) => setRepeatEndCount(Number(e.target.value))}
+                    slotProps={{ htmlInput: { min: 1 } }}
+                  />
+                </FormControl>
+              )}
+              
+              {repeatEndCondition === 'none' && (
+                <Typography variant="body2" color="text.secondary" data-testId="repeat-none-info">
+                  2025년 6월 30일까지 반복됩니다.
+                </Typography>
+              )}
             </Stack>
           )}
 
@@ -654,6 +703,8 @@ function App() {
                   type: isRepeating ? repeatType : 'none',
                   interval: repeatInterval,
                   endDate: repeatEndDate || undefined,
+                  endCondition: isRepeating ? repeatEndCondition : undefined,
+                  endCount: isRepeating && repeatEndCondition === 'endCount' ? repeatEndCount : undefined,
                 },
                 notificationTime,
               });

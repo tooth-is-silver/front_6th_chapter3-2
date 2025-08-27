@@ -452,3 +452,113 @@ describe('반복 일정 표시', () => {
     expect(monthView.queryByTestId('RepeatIcon')).not.toBeInTheDocument();
   });
 });
+
+describe('반복 종료 조건', () => {
+  it('특정 날짜까지 반복 조건을 설정할 수 있다', async () => {
+    setupMockHandlerCreation();
+
+    const { user } = setup(<App />);
+
+    await user.click(screen.getAllByText('일정 추가')[0]);
+    await user.type(screen.getByLabelText('제목'), '특정날짜까지 반복');
+    await user.type(screen.getByLabelText('날짜'), '2025-01-01');
+    await user.type(screen.getByLabelText('시작 시간'), '09:00');
+    await user.type(screen.getByLabelText('종료 시간'), '10:00');
+    await user.type(screen.getByLabelText('설명'), '특정 날짜까지 반복 테스트');
+    await user.type(screen.getByLabelText('위치'), '회의실 A');
+    await user.click(screen.getByLabelText('카테고리'));
+    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '업무-option' }));
+
+    // 반복 설정
+    await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: 'daily-option' }));
+
+    // 종료 조건을 특정 날짜까지로 설정
+    await user.click(
+      within(screen.getByTestId('repeat-end-condition-select')).getByRole('combobox')
+    );
+    await user.click(screen.getByRole('option', { name: 'endDate-option' }));
+
+    // 종료 날짜 입력
+    await user.type(screen.getByTestId('repeat-end-date-input'), '2025-01-05');
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 성공 메시지 확인
+    expect(screen.getByText('반복 일정이 생성되었습니다.')).toBeInTheDocument();
+  });
+
+  it('특정 횟수만큼 반복 조건을 설정할 수 있다', async () => {
+    setupMockHandlerCreation();
+
+    const { user } = setup(<App />);
+
+    await user.click(screen.getAllByText('일정 추가')[0]);
+    await user.type(screen.getByLabelText('제목'), '3회 반복');
+    await user.type(screen.getByLabelText('날짜'), '2025-01-01');
+    await user.type(screen.getByLabelText('시작 시간'), '09:00');
+    await user.type(screen.getByLabelText('종료 시간'), '10:00');
+    await user.type(screen.getByLabelText('설명'), '3회 반복 테스트');
+    await user.type(screen.getByLabelText('위치'), '회의실 A');
+    await user.click(screen.getByLabelText('카테고리'));
+    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '업무-option' }));
+
+    // 반복 설정
+    await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: 'weekly-option' }));
+
+    // 종료 조건을 특정 횟수만큼으로 설정
+    await user.click(
+      within(screen.getByTestId('repeat-end-condition-select')).getByRole('combobox')
+    );
+    await user.click(screen.getByRole('option', { name: 'endCount-option' }));
+
+    // 반복 횟수 입력 (기본값 1을 3으로 변경)
+    const countInput = screen.getByTestId('repeat-end-count-input');
+    await user.type(countInput, '{selectall}3');
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 성공 메시지 확인
+    expect(screen.getByText('반복 일정이 생성되었습니다.')).toBeInTheDocument();
+  });
+
+  it('종료 없음 조건을 설정할 수 있다', async () => {
+    setupMockHandlerCreation();
+
+    const { user } = setup(<App />);
+
+    await user.click(screen.getAllByText('일정 추가')[0]);
+    await user.type(screen.getByLabelText('제목'), '무한 반복');
+    await user.type(screen.getByLabelText('날짜'), '2025-01-01');
+    await user.type(screen.getByLabelText('시작 시간'), '09:00');
+    await user.type(screen.getByLabelText('종료 시간'), '10:00');
+    await user.type(screen.getByLabelText('설명'), '종료 없음 테스트');
+    await user.type(screen.getByLabelText('위치'), '회의실 A');
+    await user.click(screen.getByLabelText('카테고리'));
+    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: '업무-option' }));
+
+    // 반복 설정
+    await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
+    await user.click(screen.getByRole('option', { name: 'monthly-option' }));
+
+    // 종료 조건을 종료 없음으로 설정
+    await user.click(
+      within(screen.getByTestId('repeat-end-condition-select')).getByRole('combobox')
+    );
+    await user.click(screen.getByRole('option', { name: 'none-option' }));
+
+    // 안내 텍스트 확인
+    expect(screen.getByTestId('repeat-none-info')).toHaveTextContent(
+      '2025년 6월 30일까지 반복됩니다.'
+    );
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 성공 메시지 확인
+    expect(screen.getByText('반복 일정이 생성되었습니다.')).toBeInTheDocument();
+  });
+});

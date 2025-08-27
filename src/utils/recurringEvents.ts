@@ -72,7 +72,17 @@ export function generateRecurringEvents(baseEvent: Event): Event[] {
 
   const events: Event[] = [baseEvent];
   const startDate = new Date(baseEvent.date);
+  
+  // 종료 조건 처리
+  const endCondition = baseEvent.repeat.endCondition;
   const endDate = baseEvent.repeat.endDate ? new Date(baseEvent.repeat.endDate) : null;
+  const endCount = baseEvent.repeat.endCount || 0;
+  
+  // 종료 없음의 경우 기본 종료 날짜 설정 (2025-06-30)
+  let defaultEndDate: Date | null = null;
+  if (endCondition === 'none') {
+    defaultEndDate = new Date('2025-06-30');
+  }
   
   let occurrenceCount = 1;
   let currentDate: Date | null;
@@ -95,18 +105,33 @@ export function generateRecurringEvents(baseEvent: Event): Event[] {
       continue;
     }
     
-    if (endDate && currentDate > endDate) {
+    // 종료 조건 확인
+    if (endCondition === 'endDate' && endDate && currentDate > endDate) {
+      break;
+    }
+    
+    if (endCondition === 'endCount' && events.length >= endCount) {
+      break;
+    }
+    
+    if (endCondition === 'none' && defaultEndDate && currentDate > defaultEndDate) {
+      break;
+    }
+    
+    // 기본 endDate 처리 (하위 호환성)
+    if (!endCondition && endDate && currentDate > endDate) {
       break;
     }
     
     const recurringEvent: Event = {
       ...baseEvent,
       id: `${baseEvent.id}-${occurrenceCount}`,
-      date: currentDate.toISOString().split('T')[0]
+      date: currentDate.toISOString().split('T')[0],
     };
     
     events.push(recurringEvent);
     
+    // 안전장치
     if (occurrenceCount > 1000) {
       break;
     }
