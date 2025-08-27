@@ -54,6 +54,33 @@ const saveSchedule = async (
   await user.click(screen.getByTestId('event-submit-button'));
 };
 
+// 반복 일정 생성을 위한 헬퍼 함수
+const saveRecurringSchedule = async (
+  user: UserEvent,
+  form: Omit<Event, 'id' | 'notificationTime' | 'repeat'>,
+  repeatType: 'weekly' | 'daily' | 'monthly' | 'yearly'
+) => {
+  const { title, date, startTime, endTime, location, description, category } = form;
+
+  await user.click(screen.getAllByText('일정 추가')[0]);
+
+  await user.type(screen.getByLabelText('제목'), title);
+  await user.type(screen.getByLabelText('날짜'), date);
+  await user.type(screen.getByLabelText('시작 시간'), startTime);
+  await user.type(screen.getByLabelText('종료 시간'), endTime);
+  await user.type(screen.getByLabelText('설명'), description);
+  await user.type(screen.getByLabelText('위치'), location);
+  await user.click(screen.getByLabelText('카테고리'));
+  await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
+  await user.click(screen.getByRole('option', { name: `${category}-option` }));
+
+  // 반복 설정
+  await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
+  await user.click(screen.getByRole('option', { name: `${repeatType}-option` }));
+
+  await user.click(screen.getByTestId('event-submit-button'));
+};
+
 describe('일정 CRUD 및 기본 기능', () => {
   it('입력한 새로운 일정 정보에 맞춰 모든 필드가 이벤트 리스트에 정확히 저장된다.', async () => {
     setupMockHandlerCreation();
@@ -347,28 +374,25 @@ describe('반복 일정 표시', () => {
 
     const { user } = setup(<App />);
 
-    // 반복 일정 생성
-    await user.click(screen.getAllByText('일정 추가')[0]);
-    await user.type(screen.getByLabelText('제목'), '반복 회의');
-    await user.type(screen.getByLabelText('날짜'), '2025-10-15');
-    await user.type(screen.getByLabelText('시작 시간'), '09:00');
-    await user.type(screen.getByLabelText('종료 시간'), '10:00');
-    await user.type(screen.getByLabelText('설명'), '매주 반복 회의');
-    await user.type(screen.getByLabelText('위치'), '회의실 A');
-    await user.click(screen.getByLabelText('카테고리'));
-    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
-    await user.click(screen.getByRole('option', { name: '업무-option' }));
-
-    // 반복 설정 - weekly로 설정
-    await user.click(within(screen.getByTestId('repeat-type-select')).getByRole('combobox'));
-    await user.click(screen.getByRole('option', { name: 'weekly-option' }));
-
-    await user.click(screen.getByTestId('event-submit-button'));
+    // 반복 일정 생성 - 리팩토링된 헬퍼 함수 사용
+    await saveRecurringSchedule(
+      user,
+      {
+        title: '반복 회의',
+        date: '2025-10-15',
+        startTime: '09:00',
+        endTime: '10:00',
+        description: '매주 반복 회의',
+        location: '회의실 A',
+        category: '업무',
+      },
+      'weekly'
+    );
 
     // 캘린더 뷰에서 반복 일정 시각적 구분 확인
     const monthView = within(screen.getByTestId('month-view'));
 
-    // 반복 일정임을 나타내는 시각적 요소가 있어야 함 (아이콘 또는 태그)
+    // 반복 일정임을 나타내는 시각적 요소 검증
     const repeatIcon = monthView.getByTestId('RepeatIcon');
     expect(repeatIcon).toBeInTheDocument();
     expect(repeatIcon).toBeVisible();
@@ -384,17 +408,16 @@ describe('반복 일정 표시', () => {
 
     const { user } = setup(<App />);
 
-    // 단일 일정 생성 (반복 없음)
-    await user.click(screen.getAllByText('일정 추가')[0]);
-    await user.type(screen.getByLabelText('제목'), '단일 회의');
-    await user.type(screen.getByLabelText('날짜'), '2025-10-15');
-    await user.type(screen.getByLabelText('시작 시간'), '09:00');
-    await user.type(screen.getByLabelText('종료 시간'), '10:00');
-    await user.type(screen.getByLabelText('설명'), '단발성 회의');
-    await user.type(screen.getByLabelText('위치'), '회의실 A');
-    await user.click(screen.getByLabelText('카테고리'));
-    await user.click(within(screen.getByLabelText('카테고리')).getByRole('combobox'));
-    await user.click(screen.getByRole('option', { name: '업무-option' }));
+    // 단일 일정 생성 - 기존 헬퍼 함수 사용 (반복 설정 없음)
+    await saveSchedule(user, {
+      title: '단일 회의',
+      date: '2025-10-15',
+      startTime: '09:00',
+      endTime: '10:00',
+      description: '단발성 회의',
+      location: '회의실 A',
+      category: '업무',
+    });
 
     server.use(
       http.post('/api/events', async ({ request }) => {
@@ -423,8 +446,6 @@ describe('반복 일정 표시', () => {
         });
       })
     );
-
-    await user.click(screen.getByTestId('event-submit-button'));
 
     // 캘린더 뷰에서 반복 아이콘이 없어야 함
     const monthView = within(screen.getByTestId('month-view'));
