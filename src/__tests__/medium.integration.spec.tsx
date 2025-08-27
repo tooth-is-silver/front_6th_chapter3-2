@@ -539,3 +539,103 @@ describe('반복 종료 조건', () => {
     expect(screen.getByText('반복 일정이 생성되었습니다.')).toBeInTheDocument();
   });
 });
+
+describe('반복 일정 단일 수정', () => {
+  it('반복 일정을 수정하면 단일 일정으로 변경되고 반복 아이콘이 사라진다', async () => {
+    // 반복 일정이 있는 상태로 시작
+    server.use(
+      http.get('/api/events', () => {
+        return HttpResponse.json({
+          events: [
+            {
+              id: '1',
+              title: '매주 회의',
+              date: '2025-10-15',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '매주 반복 회의',
+              location: '회의실 A',
+              category: '업무',
+              repeat: {
+                type: 'weekly',
+                interval: 1,
+                endDate: '2025-12-31',
+                endCondition: 'endDate',
+              },
+              notificationTime: 10,
+            },
+          ],
+        });
+      })
+    );
+
+    const { user } = setup(<App />);
+    await screen.findByText('일정 로딩 완료!');
+
+    // 초기 상태에서 반복 아이콘이 있는지 확인
+    const monthView = within(screen.getByTestId('month-view'));
+    expect(monthView.getByTestId('RepeatIcon')).toBeInTheDocument();
+
+    // 반복 일정 수정하기
+    await user.click(screen.getByText('매주 회의'));
+
+    // 제목 수정
+    const titleInput = screen.getByLabelText('제목');
+    await user.clear(titleInput);
+    await user.type(titleInput, '수정된 단일 회의');
+
+    // 설명 수정
+    const descriptionInput = screen.getByLabelText('설명');
+    await user.clear(descriptionInput);
+    await user.type(descriptionInput, '단일 회의로 변경됨');
+
+    // 저장하기 전 수정된 일정이 단일로 변경되는지 확인하는 목 설정
+    server.use(
+      http.put('/api/events/1', async ({ request }) => {
+        const requestBody = await request.json();
+        const eventData = requestBody as Event;
+
+        // 반복 일정 수정 시 단일 일정으로 변경되는지 확인
+        expect(eventData.repeat.type).toBe('none');
+        expect(eventData.title).toBe('수정된 단일 회의');
+        expect(eventData.description).toBe('단일 회의로 변경됨');
+
+        return HttpResponse.json({
+          ...eventData,
+          id: '1',
+        });
+      }),
+      http.get('/api/events', () => {
+        return HttpResponse.json({
+          events: [
+            {
+              id: '1',
+              title: '수정된 단일 회의',
+              date: '2025-10-15',
+              startTime: '09:00',
+              endTime: '10:00',
+              description: '단일 회의로 변경됨',
+              location: '회의실 A',
+              category: '업무',
+              repeat: { type: 'none', interval: 1 },
+              notificationTime: 10,
+            },
+          ],
+        });
+      })
+    );
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    // 성공 메시지 확인
+    expect(screen.getByText('일정이 수정되었습니다.')).toBeInTheDocument();
+
+    // 수정 후 반복 아이콘이 사라졌는지 확인
+    await screen.findByText('일정 로딩 완료!');
+    const updatedMonthView = within(screen.getByTestId('month-view'));
+    expect(updatedMonthView.queryByTestId('RepeatIcon')).not.toBeInTheDocument();
+
+    // 제목이 변경되었는지 확인
+    expect(screen.getByText('수정된 단일 회의')).toBeInTheDocument();
+  });
+});
